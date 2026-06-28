@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% block title %}InvoiceIQ — Payment Delay Prediction{% endblock %}
+
+{% block extra_head %}
+<style>
+  .hero {
+    padding: 5rem 2rem 4rem;
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    background: rgba(6,182,212,0.1);
+    border: 1px solid rgba(6,182,212,0.2);
+    border-radius: 100px;
+    padding: 0.35em 1em;
+    margin-bottom: 1.5rem;
+  }
+
+  h1 {
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 1.25rem;
+  }
+
+  h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 560px;
+    margin: 0 auto 2.5rem;
+  }
+
+  .hero-ctas {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* pipeline diagram */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 3rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    overflow-x: auto;
+  }
+
+  .pipe-step {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    min-width: 130px;
+    flex-shrink: 0;
+  }
+
+  .pipe-icon {
+    font-size: 1.6rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .pipe-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.2rem;
+  }
+
+  .pipe-sub {
+    font-size: 0.65rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .pipe-arrow {
+    color: var(--muted);
+    font-size: 1.2rem;
+    margin: 0 0.25rem;
+    flex-shrink: 0;
+  }
+
+  /* stats strip */
+  .stats-strip {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 2rem;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .stats-num {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .stats-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+
+  /* features */
+  .features {
+    padding: 3rem 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-head {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .feat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    transition: border-color 0.2s;
+  }
+
+  .feat-card:hover { border-color: var(--accent); }
+
+  .feat-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .feat-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+
+  .feat-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* tech stack */
+  .tech-strip {
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .tech-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+
+  .tech-tag {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    font-family: var(--mono);
+    color: var(--muted);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="hero">
+  <div class="eyebrow">HighRadius · Accounts Receivable AI</div>
+  <h1>Predict Invoice<br><span>Payment Delays</span></h1>
+  <p class="hero-sub">
+    ML-powered pipeline that forecasts when customers will pay—enabling
+    proactive cash flow management and collections prioritisation.
+  </p>
+  <div class="hero-ctas">
+    <a href="/predict" class="btn btn-primary">
+      ⚡ Predict a Payment
+    </a>
+    <a href="/dashboard" class="btn btn-outline">
+      📊 View Analytics
+    </a>
+  </div>
+</section>
+
+<!-- Stats -->
+<div class="stats-strip">
+  <div class="stats-grid">
+    <div>
+      <div class="stats-num">50k</div>
+      <div class="stats-desc">Training invoices</div>
+    </div>
+    <div>
+      <div class="stats-num">64%</div>
+      <div class="stats-desc">XGBoost R² score</div>
+    </div>
+    <div>
+      <div class="stats-num">5</div>
+      <div class="stats-desc">Models compared</div>
+    </div>
+    <div>
+      <div class="stats-num">16</div>
+      <div class="stats-desc">Engineered features</div>
+    </div>
+    <div>
+      <div class="stats-num">5</div>
+      <div class="stats-desc">Aging buckets</div>
+    </div>
+  </div>
+</div>
+
+<!-- Pipeline -->
+<div style="padding: 3rem 0 1rem; text-align:center;">
+  <div class="section-head">End-to-end ML pipeline</div>
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-icon">📥</div>
+      <div class="pipe-label">Raw Data</div>
+      <div class="pipe-sub">50k invoice records</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">🧹</div>
+      <div class="pipe-label">Cleaning</div>
+      <div class="pipe-sub">Dedup, nulls, types</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">⚙️</div>
+      <div class="pipe-label">Feature Eng.</div>
+      <div class="pipe-sub">16 features, date decomp</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">🤖</div>
+      <div class="pipe-label">Model Train</div>
+      <div class="pipe-sub">XGBoost + RF + LR</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">🪣</div>
+      <div class="pipe-label">Aging Bucket</div>
+      <div class="pipe-sub">0-15 / 16-30 / 30+ days</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="pipe-icon">🎯</div>
+      <div class="pipe-label">Insight</div>
+      <div class="pipe-sub">Clear date + risk level</div>
+    </div>
+  </div>
+</div>
+
+<!-- Features -->
+<section class="features">
+  <div class="section-head">What this project demonstrates</div>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">🔬</div>
+      <div class="feat-title">Exploratory Data Analysis</div>
+      <div class="feat-desc">Distribution plots, correlation heatmaps, delay analysis by customer, year, and payment terms.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🛠</div>
+      <div class="feat-title">Feature Engineering</div>
+      <div class="feat-desc">Date decomposition, CAD→USD conversion, customer avg-delay mapping, variance threshold filtering.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🏆</div>
+      <div class="feat-title">Model Comparison</div>
+      <div class="feat-desc">Linear Regression, Decision Tree, Random Forest, SVR, and XGBoost benchmarked on RMSE and R².</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🎰</div>
+      <div class="feat-title">Aging Bucket Classification</div>
+      <div class="feat-desc">Predicted delay in days mapped to 0-15 / 16-30 / 31-45 / 46-60 / 60+ day buckets for AR reporting.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⚡</div>
+      <div class="feat-title">Real-time Prediction API</div>
+      <div class="feat-desc">Flask REST endpoint accepts invoice fields and returns predicted clear date with risk level in &lt;50 ms.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📋</div>
+      <div class="feat-title">Batch Processing</div>
+      <div class="feat-desc">Run predictions over all open (unlabelled) invoices and download enriched results with aging buckets.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Tech Stack -->
+<section class="tech-strip">
+  <div class="section-head">Tech stack</div>
+  <div class="tech-tags">
+    <span class="tech-tag">Python 3.12</span>
+    <span class="tech-tag">Flask</span>
+    <span class="tech-tag">Pandas</span>
+    <span class="tech-tag">NumPy</span>
+    <span class="tech-tag">Scikit-learn</span>
+    <span class="tech-tag">XGBoost</span>
+    <span class="tech-tag">Chart.js</span>
+    <span class="tech-tag">LabelEncoder</span>
+    <span class="tech-tag">VarianceThreshold</span>
+    <span class="tech-tag">RandomForestRegressor</span>
+  </div>
+</section>
+
+{% endblock %}

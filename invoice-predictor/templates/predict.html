@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+{% block title %}Predict — InvoiceIQ{% endblock %}
+
+{% block extra_head %}
+<style>
+  .predict-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+    padding: 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 900px) {
+    .predict-layout { grid-template-columns: 1fr; }
+  }
+
+  .form-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+  }
+
+  .form-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+
+  .form-card .subtitle {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+  }
+
+  .form-footer {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* Result panel */
+  .result-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color 0.3s;
+  }
+
+  .result-card.active-low    { border-color: var(--success); }
+  .result-card.active-medium { border-color: var(--warning); }
+  .result-card.active-high   { border-color: var(--danger); }
+
+  .result-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .result-date {
+    font-family: var(--mono);
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+
+  .result-sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .risk-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-top: 0.5rem;
+  }
+
+  .risk-low    { background: rgba(16,185,129,0.15);  color: var(--success); }
+  .risk-medium { background: rgba(245,158,11,0.15);  color: var(--warning); }
+  .risk-high   { background: rgba(239,68,68,0.15);   color: var(--danger);  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid rgba(30,45,68,0.5);
+    font-size: 0.82rem;
+  }
+
+  .detail-row:last-child { border-bottom: none; }
+
+  .detail-key { color: var(--muted); }
+
+  .detail-val {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+  }
+
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+  /* Batch section */
+  .batch-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem 3rem;
+  }
+
+  .batch-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .batch-header h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .batch-header p {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+
+  .bucket-pills {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .bucket-pill {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .bucket-pill:hover { border-color: var(--accent); color: var(--accent); }
+
+  .batch-table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  #batch-status {
+    font-size: 0.78rem;
+    color: var(--muted);
+    padding: 0.5rem 0;
+  }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--accent);
+    border-radius: 100px;
+    width: 0;
+    transition: width 0.5s;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="predict-layout">
+  <!-- Left: Form -->
+  <div class="form-card">
+    <h3>Invoice Details</h3>
+    <p class="subtitle">Enter invoice fields to predict payment delay and clear date.</p>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Business Code</label>
+        <select id="business_code">
+          <option value="U001">U001 — US Operations</option>
+          <option value="CA02">CA02 — Canada</option>
+          <option value="UK03">UK03 — United Kingdom</option>
+          <option value="AU04">AU04 — Australia</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Customer Number</label>
+        <input type="text" id="cust_number" value="200769623" placeholder="e.g. 200769623">
+      </div>
+
+      <div class="form-group">
+        <label>Customer Name</label>
+        <select id="name_customer">
+          <option>WAL-MAR corp</option>
+          <option>BEN E Foods</option>
+          <option>KROGER Inc</option>
+          <option>SAFEW associates</option>
+          <option>BJ'S Wholesale</option>
+          <option>COST foundation</option>
+          <option>TARG us</option>
+          <option>MAINES llc</option>
+          <option>SYSCO co</option>
+          <option>MDV Trust</option>
+          <option>SYSC llc</option>
+          <option>DECA corporation</option>
+          <option>DEC corp</option>
+          <option>AM wholesale</option>
+          <option>RESTA co</option>
+          <option>MEIJ in</option>
+          <option>WINC trust</option>
+          <option>C&S WH trust</option>
+          <option>OK systems</option>
+          <option>GROC associates</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Invoice Currency</label>
+        <select id="invoice_currency">
+          <option value="USD">USD</option>
+          <option value="CAD">CAD (×0.7 → USD)</option>
+          <option value="GBP">GBP</option>
+          <option value="AUD">AUD</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Invoice Amount</label>
+        <input type="number" id="converted_usd" value="54273" min="0" step="0.01">
+      </div>
+
+      <div class="form-group">
+        <label>Payment Terms</label>
+        <select id="cust_payment_terms">
+          <option value="NAA8">NAA8 — Net 15</option>
+          <option value="NAH4">NAH4 — Net 30</option>
+          <option value="NAD1">NAD1 — Net 21</option>
+          <option value="NAM4">NAM4 — Net 45</option>
+          <option value="CA10">CA10 — CA Net 10</option>
+          <option value="NAU5">NAU5 — Net 60</option>
+          <option value="NAC6">NAC6 — Net 30 EOM</option>
+          <option value="NAM2">NAM2 — Net 14</option>
+          <option value="NAAX">NAAX — Custom</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Posting Date</label>
+        <input type="date" id="posting_date" value="2020-01-26">
+      </div>
+
+      <div class="form-group">
+        <label>Due Date</label>
+        <input type="date" id="due_in_date" value="2020-02-10">
+      </div>
+
+      <div class="form-group">
+        <label>Business Year</label>
+        <select id="buisness_year">
+          <option value="2019">2019</option>
+          <option value="2020" selected>2020</option>
+          <option value="2021">2021</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Document ID</label>
+        <input type="number" id="doc_id" value="1930438000">
+      </div>
+    </div>
+
+    <div class="form-footer">
+      <button class="btn btn-primary" id="predict-btn" onclick="predict()">
+        <span class="spinner" id="spin"></span>
+        <span id="btn-text">⚡ Predict Payment</span>
+      </button>
+      <button class="btn btn-outline" onclick="fillSample()">Load Sample</button>
+    </div>
+  </div>
+
+  <!-- Right: Result -->
+  <div class="result-panel">
+    <!-- Placeholder -->
+    <div class="empty-state" id="empty-state">
+      <div class="icon">🔮</div>
+      <div>Fill in the invoice details<br>and click <strong>Predict Payment</strong></div>
+    </div>
+
+    <!-- Result (hidden initially) -->
+    <div class="result-card" id="result-card" style="display:none;">
+      <div class="result-label">Predicted Clear Date</div>
+      <div class="result-date" id="res-date">—</div>
+      <div class="result-sub" id="res-sub">—</div>
+      <div class="risk-pill" id="res-risk">—</div>
+    </div>
+
+    <div class="result-card" id="details-card" style="display:none;">
+      <div class="result-label">Prediction Breakdown</div>
+      <div class="detail-row">
+        <span class="detail-key">Customer</span>
+        <span class="detail-val" id="d-customer">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Due Date</span>
+        <span class="detail-val" id="d-due">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Predicted Clear</span>
+        <span class="detail-val" id="d-clear">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Delay (days)</span>
+        <span class="detail-val" id="d-delay">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Aging Bucket</span>
+        <span class="detail-val" id="d-bucket">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Invoice Amount</span>
+        <span class="detail-val" id="d-amount">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Risk Level</span>
+        <span class="detail-val" id="d-risk">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Batch Section -->
+<div class="batch-section">
+  <div class="batch-header">
+    <div>
+      <h3>📋 Batch Prediction — Open Invoices</h3>
+      <p>Run predictions over all unlabelled invoices in the dataset.</p>
+    </div>
+    <button class="btn btn-outline" id="batch-btn" onclick="runBatch()">
+      <span class="spinner" id="batch-spin"></span>
+      <span id="batch-text">Run Batch</span>
+    </button>
+  </div>
+
+  <div id="batch-progress" style="margin-bottom:0.75rem; display:none;">
+    <div style="font-size:0.78rem; color:var(--muted); margin-bottom:0.35rem;" id="batch-status">Processing...</div>
+    <div style="background:var(--border); border-radius:100px; height:3px;">
+      <div class="progress-bar" id="pbar"></div>
+    </div>
+  </div>
+
+  <div class="bucket-pills" id="bucket-pills" style="display:none;"></div>
+
+  <div class="batch-table-wrap">
+    <div class="table-wrap">
+      <table id="batch-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Business Code</th>
+            <th>Due Date</th>
+            <th>Predicted Clear</th>
+            <th>Delay (days)</th>
+            <th>Aging Bucket</th>
+            <th>Amount (USD)</th>
+          </tr>
+        </thead>
+        <tbody id="batch-body">
+          <tr>
+            <td colspan="7" style="text-align:center; color:var(--muted); padding:2rem;">
+              Click "Run Batch" to process all open invoices.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SAMPLES = [
+  { business_code:'U001', cust_number:'200769623', name_customer:'WAL-MAR corp',
+    invoice_currency:'USD', converted_usd:54273, cust_payment_terms:'NAH4',
+    posting_date:'2020-01-26', due_in_date:'2020-02-10', buisness_year:'2020', doc_id:1930438000 },
+  { business_code:'CA02', cust_number:'140105686', name_customer:'SYSC llc',
+    invoice_currency:'CAD', converted_usd:3300, cust_payment_terms:'CA10',
+    posting_date:'2020-03-30', due_in_date:'2020-04-10', buisness_year:'2020', doc_id:2960623000 },
+  { business_code:'U001', cust_number:'200980828', name_customer:'BEN E Foods',
+    invoice_currency:'USD', converted_usd:79657, cust_payment_terms:'NAD1',
+    posting_date:'2019-07-22', due_in_date:'2019-08-11', buisness_year:'2019', doc_id:1929646000 },
+];
+
+let sampleIdx = 0;
+
+function fillSample() {
+  const s = SAMPLES[sampleIdx % SAMPLES.length];
+  sampleIdx++;
+  Object.entries(s).forEach(([k, v]) => {
+    const el = document.getElementById(k);
+    if (el) el.value = v;
+  });
+}
+
+function setLoading(on) {
+  document.getElementById('spin').style.display = on ? 'inline-block' : 'none';
+  document.getElementById('btn-text').textContent = on ? 'Predicting...' : '⚡ Predict Payment';
+  document.getElementById('predict-btn').disabled = on;
+}
+
+async function predict() {
+  setLoading(true);
+  const payload = {
+    business_code:      document.getElementById('business_code').value,
+    cust_number:        document.getElementById('cust_number').value,
+    name_customer:      document.getElementById('name_customer').value,
+    invoice_currency:   document.getElementById('invoice_currency').value,
+    converted_usd:      document.getElementById('converted_usd').value,
+    cust_payment_terms: document.getElementById('cust_payment_terms').value,
+    posting_date:       document.getElementById('posting_date').value,
+    due_in_date:        document.getElementById('due_in_date').value,
+    buisness_year:      document.getElementById('buisness_year').value,
+    doc_id:             document.getElementById('doc_id').value,
+  };
+
+  try {
+    const resp = await fetch('/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (data.status !== 'ok') throw new Error(data.message);
+    renderResult(data);
+    showToast('Prediction complete ✓');
+  } catch(e) {
+    showToast('Error: ' + e.message, false);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderResult(d) {
+  document.getElementById('empty-state').style.display = 'none';
+
+  const rc = document.getElementById('result-card');
+  rc.style.display = 'block';
+  rc.className = 'result-card active-' + d.risk_level.toLowerCase();
+  document.getElementById('res-date').textContent = d.predicted_date;
+  document.getElementById('res-sub').textContent  = `${d.delay_days >= 0 ? '+' : ''}${d.delay_days} days from due date`;
+
+  const riskEl = document.getElementById('res-risk');
+  riskEl.textContent = `${d.risk_level === 'Low' ? '✅' : d.risk_level === 'Medium' ? '⚠️' : '🔴'} ${d.risk_level} Risk`;
+  riskEl.className = 'risk-pill risk-' + d.risk_level.toLowerCase();
+
+  const dc = document.getElementById('details-card');
+  dc.style.display = 'block';
+  document.getElementById('d-customer').textContent = d.customer;
+  document.getElementById('d-due').textContent      = d.due_date;
+  document.getElementById('d-clear').textContent    = d.predicted_date;
+  document.getElementById('d-delay').textContent    = (d.delay_days >= 0 ? '+' : '') + d.delay_days + ' days';
+  document.getElementById('d-bucket').textContent   = d.aging_bucket;
+  document.getElementById('d-amount').textContent   = '$' + d.amount.toLocaleString();
+  document.getElementById('d-risk').textContent     = d.risk_level;
+}
+
+// Batch
+async function runBatch() {
+  const btn = document.getElementById('batch-btn');
+  btn.disabled = true;
+  document.getElementById('batch-spin').style.display = 'inline-block';
+  document.getElementById('batch-text').textContent = 'Processing...';
+  document.getElementById('batch-progress').style.display = 'block';
+
+  // Animate progress bar
+  const pbar = document.getElementById('pbar');
+  let pct = 0;
+  const ticker = setInterval(() => {
+    pct = Math.min(pct + 3, 90);
+    pbar.style.width = pct + '%';
+  }, 150);
+
+  try {
+    const resp = await fetch('/batch_predict', { method: 'POST' });
+    const data = await resp.json();
+    if (data.status !== 'ok') throw new Error(data.message);
+
+    clearInterval(ticker);
+    pbar.style.width = '100%';
+    document.getElementById('batch-status').textContent =
+      `✓ Processed ${data.total_processed.toLocaleString()} invoices · showing top 100`;
+
+    renderBucketPills(data.bucket_summary);
+    renderBatchTable(data.preview);
+    showToast(`Batch complete: ${data.total_processed} invoices processed ✓`);
+  } catch(e) {
+    clearInterval(ticker);
+    showToast('Batch error: ' + e.message, false);
+  } finally {
+    btn.disabled = false;
+    document.getElementById('batch-spin').style.display = 'none';
+    document.getElementById('batch-text').textContent = 'Run Batch';
+  }
+}
+
+function renderBucketPills(summary) {
+  const container = document.getElementById('bucket-pills');
+  container.style.display = 'flex';
+  container.innerHTML = '';
+  const COLORS = {
+    'Early': 'var(--success)',
+    '0-15 days': 'var(--accent)',
+    '16-30 days': 'var(--accent2)',
+    '31-45 days': 'var(--warning)',
+    '46-60 days': 'var(--danger)',
+    'Over 60 days': '#dc2626',
+  };
+  Object.entries(summary).sort((a,b) => b[1]-a[1]).forEach(([label, count]) => {
+    const pill = document.createElement('div');
+    pill.className = 'bucket-pill';
+    pill.style.borderColor = COLORS[label] || 'var(--border)';
+    pill.style.color = COLORS[label] || 'var(--muted)';
+    pill.textContent = `${label}: ${count.toLocaleString()}`;
+    container.appendChild(pill);
+  });
+}
+
+function renderBatchTable(rows) {
+  const body = document.getElementById('batch-body');
+  body.innerHTML = '';
+  const BUCKET_COLORS = {
+    'Early': 'badge-low',
+    '0-15 days': 'badge-info',
+    '16-30 days': 'badge-info',
+    '31-45 days': 'badge-medium',
+    '46-60 days': 'badge-high',
+    'Over 60 days': 'badge-high',
+  };
+  rows.forEach(r => {
+    const amtKey = Object.keys(r).find(k => k.includes('usd') || k.includes('amount'));
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.name_customer || '—'}</td>
+      <td class="mono">${r.business_code || '—'}</td>
+      <td class="mono">${r.due_in_date || '—'}</td>
+      <td class="mono">${r.predicted_clear_date || '—'}</td>
+      <td class="mono">${r.delay_days != null ? (r.delay_days >= 0 ? '+' : '') + r.delay_days : '—'}</td>
+      <td><span class="badge ${BUCKET_COLORS[r.aging_bucket] || 'badge-info'}">${r.aging_bucket || '—'}</span></td>
+      <td class="mono">$${amtKey ? (r[amtKey]||0).toLocaleString() : '—'}</td>
+    `;
+    body.appendChild(tr);
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+{% block title %}Analytics — InvoiceIQ{% endblock %}
+
+{% block extra_head %}
+<style>
+  .page-header {
+    padding: 2rem 2rem 1rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+
+  .page-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .page-header p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .kpi {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+
+  .kpi-value {
+    font-family: var(--mono);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+
+  .kpi-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .kpi-accent { color: var(--accent); }
+  .kpi-success { color: var(--success); }
+  .kpi-warning { color: var(--warning); }
+  .kpi-danger  { color: var(--danger); }
+
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  @media (max-width: 768px) {
+    .charts-row { grid-template-columns: 1fr; }
+  }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  .chart-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+  }
+
+  .chart-wrap { position: relative; height: 260px; }
+
+  /* Model comparison table */
+  .model-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .model-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.82rem;
+  }
+
+  .model-name {
+    min-width: 160px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .model-bar-bg {
+    flex: 1;
+    background: var(--border);
+    border-radius: 100px;
+    height: 8px;
+    position: relative;
+  }
+
+  .model-bar-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    border-radius: 100px;
+    transition: width 0.8s ease;
+  }
+
+  .model-val {
+    min-width: 52px;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .best-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--success);
+    background: rgba(16,185,129,0.12);
+    border-radius: 4px;
+    padding: 0.15em 0.5em;
+  }
+
+  /* Top delayed customers */
+  .customer-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .customer-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.82rem;
+  }
+
+  .cust-name {
+    flex: 1;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cust-days {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--warning);
+    min-width: 52px;
+    text-align: right;
+  }
+
+  /* Feature importance */
+  .fi-list { display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .fi-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .fi-name {
+    min-width: 190px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .fi-bar-bg {
+    flex: 1;
+    background: var(--border);
+    border-radius: 100px;
+    height: 6px;
+  }
+
+  .fi-bar-fill {
+    height: 6px;
+    border-radius: 100px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .fi-val {
+    min-width: 44px;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h2>📊 Analytics Dashboard</h2>
+    <p>EDA insights, model comparison, and feature importance from the ML pipeline.</p>
+  </div>
+
+  <!-- KPI Strip -->
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-value kpi-accent" id="kpi-total">–</div>
+      <div class="kpi-label">Total Labelled Invoices</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value kpi-warning" id="kpi-avg-delay">–</div>
+      <div class="kpi-label">Avg Delay (days)</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value kpi-danger" id="kpi-pct-late">–</div>
+      <div class="kpi-label">% Paid Late</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value kpi-success" id="kpi-median">–</div>
+      <div class="kpi-label">Median Invoice (USD)</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value kpi-accent" id="kpi-best-r2">–</div>
+      <div class="kpi-label">Best Model R²</div>
+    </div>
+  </div>
+
+  <!-- Row 1 -->
+  <div class="charts-row">
+    <!-- Delay distribution donut -->
+    <div class="chart-card">
+      <div class="chart-title">Payment Timing Distribution</div>
+      <div class="chart-wrap">
+        <canvas id="chart-delay-dist"></canvas>
+      </div>
+    </div>
+
+    <!-- Avg delay by year -->
+    <div class="chart-card">
+      <div class="chart-title">Avg Delay by Business Year</div>
+      <div class="chart-wrap">
+        <canvas id="chart-year"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2 -->
+  <div class="charts-row">
+    <!-- Model comparison -->
+    <div class="chart-card">
+      <div class="chart-title">Model Comparison — Test R²</div>
+      <div class="model-bar-wrap" id="model-bars"></div>
+    </div>
+
+    <!-- Top delayed customers -->
+    <div class="chart-card">
+      <div class="chart-title">Top 10 Customers by Avg Delay</div>
+      <div class="customer-list" id="customer-list"></div>
+    </div>
+  </div>
+
+  <!-- Feature importance (full width) -->
+  <div class="chart-card" style="margin-bottom:2rem;">
+    <div class="chart-title">XGBoost Feature Importance</div>
+    <div class="fi-list" id="fi-list"></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const COLORS = {
+  accent:   '#3b82f6',
+  accent2:  '#06b6d4',
+  success:  '#10b981',
+  warning:  '#f59e0b',
+  danger:   '#ef4444',
+  purple:   '#a855f7',
+  muted:    '#64748b',
+};
+
+const MODEL_COLORS = [COLORS.muted, COLORS.warning, COLORS.accent2, COLORS.success];
+
+async function loadAll() {
+  const [eda, mr, fi] = await Promise.all([
+    fetch('/api/eda_stats').then(r => r.json()),
+    fetch('/api/model_results').then(r => r.json()),
+    fetch('/api/feature_importance').then(r => r.json()),
+  ]);
+  renderKPIs(eda, mr);
+  renderDelayDist(eda);
+  renderYearChart(eda);
+  renderModelBars(mr);
+  renderCustomers(eda);
+  renderFeatureImportance(fi);
+}
+
+function renderKPIs(eda, mr) {
+  document.getElementById('kpi-total').textContent      = eda.total_invoices.toLocaleString();
+  document.getElementById('kpi-avg-delay').textContent  = eda.avg_delay_days;
+  document.getElementById('kpi-pct-late').textContent   = eda.pct_late + '%';
+  document.getElementById('kpi-median').textContent     = '$' + eda.amount_stats.median.toLocaleString();
+  const bestR2 = Math.max(...Object.values(mr).map(r => r.test_r2));
+  document.getElementById('kpi-best-r2').textContent    = bestR2.toFixed(4);
+}
+
+function renderDelayDist(eda) {
+  const d = eda.delay_distribution;
+  const ctx = document.getElementById('chart-delay-dist').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Early', 'On Time', '1-15 days', '16-30 days', '31-60 days', '60+ days'],
+      datasets: [{
+        data: [d.early, d.on_time, d.late_0_15, d.late_16_30, d.late_31_60, d.late_60plus],
+        backgroundColor: [COLORS.success, COLORS.accent2, COLORS.accent, COLORS.warning, COLORS.danger, '#dc2626'],
+        borderWidth: 0,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12, padding: 12 }
+        }
+      },
+      cutout: '60%',
+    }
+  });
+}
+
+function renderYearChart(eda) {
+  const d = eda.avg_delay_by_year;
+  const labels = Object.keys(d);
+  const vals   = Object.values(d);
+  const ctx = document.getElementById('chart-year').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Avg Delay (days)',
+        data: vals,
+        backgroundColor: COLORS.accent + 'cc',
+        borderColor: COLORS.accent,
+        borderWidth: 1,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#1e2d44' }, ticks: { color: '#64748b' } },
+        y: { grid: { color: '#1e2d44' }, ticks: { color: '#64748b' } }
+      }
+    }
+  });
+}
+
+function renderModelBars(mr) {
+  const container = document.getElementById('model-bars');
+  const entries = Object.entries(mr).sort((a,b) => b[1].test_r2 - a[1].test_r2);
+  const maxR2 = Math.max(...entries.map(e => e[1].test_r2));
+
+  entries.forEach(([name, r], i) => {
+    const isBest = r.test_r2 === maxR2;
+    const pct = Math.max(0, (r.test_r2 / maxR2) * 100).toFixed(1);
+    const row = document.createElement('div');
+    row.className = 'model-row';
+    row.innerHTML = `
+      <span class="model-name">${name} ${isBest ? '<span class="best-badge">Best</span>' : ''}</span>
+      <div class="model-bar-bg">
+        <div class="model-bar-fill" style="width:0%; background:${MODEL_COLORS[i] || COLORS.accent};"
+             data-pct="${pct}"></div>
+      </div>
+      <span class="model-val">${r.test_r2.toFixed(4)}</span>
+    `;
+    container.appendChild(row);
+  });
+
+  // Animate bars
+  setTimeout(() => {
+    document.querySelectorAll('.model-bar-fill').forEach(el => {
+      el.style.width = el.dataset.pct + '%';
+    });
+  }, 200);
+}
+
+function renderCustomers(eda) {
+  const container = document.getElementById('customer-list');
+  const entries = Object.entries(eda.top_delayed_customers);
+  const maxVal = Math.max(...entries.map(e => e[1]));
+  entries.forEach(([name, days]) => {
+    const row = document.createElement('div');
+    row.className = 'customer-row';
+    const pct = ((days / maxVal) * 100).toFixed(1);
+    row.innerHTML = `
+      <span class="cust-name">${name}</span>
+      <div class="model-bar-bg" style="max-width:120px;">
+        <div class="model-bar-fill" style="width:${pct}%; background:var(--warning);"></div>
+      </div>
+      <span class="cust-days">+${days}d</span>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function renderFeatureImportance(fi) {
+  const container = document.getElementById('fi-list');
+  const entries = Object.entries(fi).slice(0, 12);
+  const maxVal = entries[0][1];
+  entries.forEach(([name, val]) => {
+    const pct = ((val / maxVal) * 100).toFixed(1);
+    const row = document.createElement('div');
+    row.className = 'fi-row';
+    row.innerHTML = `
+      <span class="fi-name">${name}</span>
+      <div class="fi-bar-bg">
+        <div class="fi-bar-fill" style="width:${pct}%;"></div>
+      </div>
+      <span class="fi-val">${val}</span>
+    `;
+    container.appendChild(row);
+  });
+}
+
+loadAll();
+</script>
+{% endblock %}
